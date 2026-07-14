@@ -49,6 +49,56 @@ function App() {
       console.error("Error adding task:", error)
     }
   }
+  const handleToggleComplete = async (task) => {
+    console.log("1. Task clicked:", task.title, "| Current status:", task.completed)
+    
+    try {
+      // Notice the backticks (`) and the trailing slash (/)
+      const response = await fetch(`http://localhost:8000/api/tasks/${task.id}/`, {
+        method: 'PATCH', 
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          completed: !task.completed 
+        }),
+      })
+      
+      console.log("2. Backend responded with status:", response.status)
+
+      if (!response.ok) {
+        console.error("Backend rejected the update! Check your Django terminal.")
+        return // Stop running if the backend threw an error
+      }
+      
+      const updatedTask = await response.json()
+      console.log("3. Backend successfully returned:", updatedTask)
+      
+      // Update the React UI
+      setTasks(tasks.map((t) => (t.id === task.id ? updatedTask : t)))
+      
+    } catch (error) {
+      console.error("4. Fetch failed completely:", error)
+    }
+  }
+  const handleDeleteTask = async (taskId) => {
+    try {
+      // Send the DELETE request to the specific task's URL
+      const response = await fetch(`http://localhost:8000/api/tasks/${taskId}/`, {
+        method: 'DELETE',
+      })
+
+      if (response.ok) {
+        // If the backend successfully deleted it, update our React state
+        // .filter() creates a new array containing only tasks that DON'T match the deleted ID
+        setTasks(tasks.filter((t) => t.id !== taskId))
+      } else {
+        console.error("Failed to delete task. Backend returned status:", response.status)
+      }
+    } catch (error) {
+      console.error("Error deleting task:", error)
+    }
+  }
 
   // --- UI RENDER ---
   return (
@@ -74,15 +124,46 @@ function App() {
             key={task.id} 
             style={{ 
               padding: '15px', 
-              borderBottom: '1px solid #ccc',
+              borderBottom: '1px solid #555',
               display: 'flex',
-              alignItems: 'center',
-              textDecoration: task.completed ? 'line-through' : 'none',
-              color: task.completed ? '#888' : '#000'
+              alignItems: 'center'
+              // 1. I REMOVED the textDecoration and color from here!
             }}
           >
-            <input type="checkbox" checked={task.completed} readOnly style={{ marginRight: '15px' }} />
-            {task.title}
+            <input 
+              type="checkbox" 
+              checked={task.completed} 
+              onChange={() => handleToggleComplete(task)} 
+              style={{ marginRight: '15px', cursor: 'pointer', transform: 'scale(1.2)' }} 
+            />
+          
+            {/* 2. I ADDED the textDecoration and color to this span instead! */}
+            <span 
+              style={{ 
+                flexGrow: 1,
+                textDecoration: task.completed ? 'line-through' : 'none',
+                color: task.completed ? '#888' : '#ffffff'
+              }}
+            >
+              {task.title}
+            </span>
+          
+            {/* The Delete Button */}
+            <button 
+              onClick={() => handleDeleteTask(task.id)}
+              style={{ 
+                background: 'none', 
+                border: 'none', 
+                color: '#ff4444',
+                cursor: 'pointer', 
+                fontSize: '1.2em',
+                marginLeft: '10px',
+                padding: '5px'
+              }}
+              title="Delete task"
+            >
+              ✖
+            </button>
           </li>
         ))}
       </ul>
